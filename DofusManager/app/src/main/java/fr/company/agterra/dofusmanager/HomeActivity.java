@@ -51,7 +51,7 @@ public class HomeActivity extends AppCompatActivity {
 
         navigation.setOnNavigationItemSelectedListener(mOnNavigationItemSelectedListener);
 
-        DataRetrieveTask task = new DataRetrieveTask();
+        DataRetrieveTask task = new DataRetrieveTask(this.getApplicationContext());
 
         task.execute();
 
