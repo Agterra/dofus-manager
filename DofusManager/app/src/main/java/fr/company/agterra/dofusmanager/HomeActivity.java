@@ -18,16 +18,16 @@ public class HomeActivity extends AppCompatActivity {
 
             switch (item.getItemId()) {
 
-                case R.id.navigation_home:
+                case R.id.navigation_perso:
                     mTextMessage.setText(R.string.title_home);
                     return true;
 
                 case R.id.navigation_encyclopedie:
-                    mTextMessage.setText(R.string.title_dashboard);
+                    mTextMessage.setText(R.string.title_encyclopedie);
                     return true;
 
                 case R.id.navigation_sorts_cac:
-                    mTextMessage.setText(R.string.title_notifications);
+                    mTextMessage.setText(R.string.title_sorts_cac);
                     return true;
 
             }
@@ -50,6 +50,10 @@ public class HomeActivity extends AppCompatActivity {
         BottomNavigationView navigation = (BottomNavigationView) findViewById(R.id.navigation);
 
         navigation.setOnNavigationItemSelectedListener(mOnNavigationItemSelectedListener);
+
+        DataRetrieveTask task = new DataRetrieveTask();
+
+        task.execute();
 
     }
 
