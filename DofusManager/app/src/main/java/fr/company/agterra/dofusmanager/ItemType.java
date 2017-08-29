@@ -18,6 +18,7 @@ public enum ItemType {
     TROPHEE,
     DOFUS,
     BOUCLIER,
+    SAC,
     UNKNOWN_ITEM_TYPE
 
 }
