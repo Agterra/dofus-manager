@@ -1,6 +1,9 @@
 package fr.company.agterra.dofusmanager;
 
+import android.content.ContentValues;
 import android.content.Context;
+import android.database.Cursor;
+import android.database.sqlite.SQLiteDatabase;
 import android.os.AsyncTask;
 import android.os.SystemClock;
 
@@ -42,6 +45,10 @@ public class DataRetrieveTask extends AsyncTask <URL, Integer, String>{
 
     private Context currentContext;
 
+    private DatabaseHelper dbHelper;
+
+    private SQLiteDatabase db;
+
 
     public DataRetrieveTask(Context currentContext)
     {
@@ -55,6 +62,12 @@ public class DataRetrieveTask extends AsyncTask <URL, Integer, String>{
 
         try{
 
+            dbHelper = new DatabaseHelper(this.currentContext);
+            db = dbHelper.getWritableDatabase();
+
+            for (ItemType type : ItemType.values())
+                db.delete(type.name(), null, null);
+
             System.out.println("Synchronizing base...");
 
             int pagesNumber = this.getNumberOfPage();
@@ -65,6 +78,35 @@ public class DataRetrieveTask extends AsyncTask <URL, Integer, String>{
 
             System.out.println("All your bases are belong to us");
 
+
+            db = dbHelper.getReadableDatabase();
+
+            String[] projection = {
+                    "ID"
+            };
+
+            String selection = "ID" + " = ?";
+            String[] selectionArgs = { "My Title" };
+
+            Cursor cursor = db.query(
+                    "ANNEAU",                     // The table to query
+                    projection,                               // The columns to return
+                    null,                                // The columns for the WHERE clause
+                    null,                            // The values for the WHERE clause
+                    null,                                     // don't group the rows
+                    null,                                     // don't filter by row groups
+                    null                                 // The sort order
+            );
+
+            StringBuilder Ahahah = new StringBuilder();
+
+            while(cursor.moveToNext()) {
+                Ahahah.append(cursor.getString(cursor.getColumnIndex("ID")) + "\n");
+            }
+
+            cursor.close();
+            db.close();
+            System.out.println(Ahahah);
         }
         catch (Exception e)
         {
@@ -273,12 +315,18 @@ public class DataRetrieveTask extends AsyncTask <URL, Integer, String>{
     private ArrayList<Item> getAllEquipements (ArrayList <String> equipementsIDs) throws Exception
     {
 
+        dbHelper = new DatabaseHelper(this.currentContext);
+        db = dbHelper.getWritableDatabase();
+        ContentValues values = new ContentValues();
+
         ArrayList <Item> allEquipements  = new ArrayList<>();
 
-        for (int i = 0; i <= equipementsIDs.size(); i++)
+        //for (int i = 0; i <= equipementsIDs.size(); i++)
+        //To allow testing
+        for (int i = 0; i <= 10; i++)
         {
 
-            this.equipementURL =  new URL(baseEquipementURL + "/" + equipementsIDs.get(i));
+            this.equipementURL =  new URL("https://www.dofus.com/fr/mmorpg/encyclopedie/equipements/" + equipementsIDs.get(i));
 
             CookieHandler.setDefault(new CookieManager(null, CookiePolicy.ACCEPT_ALL));
 
@@ -304,11 +352,11 @@ public class DataRetrieveTask extends AsyncTask <URL, Integer, String>{
 
             Item item = new Item();
 
-            String itemTypeString = "\"ak-encyclo-detail-type col-xs-6\"";
+            String itemTypeString = "<strong>Type</strong> : <span>";
 
             int itemTypeFirstIndex = this.fileString.indexOf(itemTypeString);
 
-            int itemTypeLastIndex = this.fileString.indexOf("</span></div><div class=\"ak-encyclo-detail-type col-xs-6 text-right\">Level: ");
+            int itemTypeLastIndex = this.fileString.indexOf("</span></div>", itemTypeFirstIndex);
 
             System.out.println("index: " + itemTypeFirstIndex);
 
@@ -317,21 +365,17 @@ public class DataRetrieveTask extends AsyncTask <URL, Integer, String>{
 
                 String itemType = this.fileString.substring(itemTypeFirstIndex + itemTypeString.length(), itemTypeLastIndex);
 
-                int startIndex = itemType.indexOf("<span>");
-
-                int endIndex = itemType.indexOf("</span>");
-
-                itemType = itemType.substring(startIndex, endIndex);
-
                 for (ItemType type : ItemType.values())
                 {
 
-                    if(type.name().equalsIgnoreCase(itemType))
+                    if(type.name().equalsIgnoreCase(itemType)) {
                         item.setType(type);
+                        System.out.println(type.name());
 
-
-                    System.out.println(type.name());
-
+                        values.put("ID", equipementsIDs.get(i));
+                        db.insert(type.name(),null,values);
+                        values.clear();
+                    }
 
                 }
 
@@ -339,6 +383,7 @@ public class DataRetrieveTask extends AsyncTask <URL, Integer, String>{
 
         }
 
+        db.close();
         return allEquipements;
 
     }

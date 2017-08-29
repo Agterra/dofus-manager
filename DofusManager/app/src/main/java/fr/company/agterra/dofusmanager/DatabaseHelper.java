@@ -18,9 +18,9 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         String AllEffect = "";
 
         for (EffectType type : EffectType.values())
-            AllEffect += "," + type.name() + " SMALLINT()";
+            AllEffect += "," + type.name() + " VARCHAR(30)";
 
-        String Result = "CREATE TABLE " + TABLE_NAME + " (ID" + " SMALLINT()" + AllEffect + ")";
+        String Result = "CREATE TABLE " + TABLE_NAME + " (ID TINYTEXT,NAME TINYTEXT,NIVEAU VARCHAR(3)" + AllEffect + ")";
 
         return Result;
     }
@@ -39,6 +39,8 @@ public class DatabaseHelper extends SQLiteOpenHelper {
     public void onCreate(SQLiteDatabase db) {
         for (ItemType type : ItemType.values())
             db.execSQL(SQL_CREATE_ENTRIES(type.name()));
+
+        System.out.print("Database created");
     }
 
 

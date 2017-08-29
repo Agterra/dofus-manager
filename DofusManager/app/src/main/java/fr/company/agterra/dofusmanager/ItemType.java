@@ -6,10 +6,10 @@ package fr.company.agterra.dofusmanager;
 
 public enum ItemType {
 
-    COIFFE,
+    CHAPEAU,
     CAPE,
     CEINTURE,
-    CHAUSSURES,
+    BOTTES,
     AMULETTE,
     ANNEAU,
     ARME,
