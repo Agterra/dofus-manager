@@ -7,16 +7,19 @@ import android.database.sqlite.SQLiteDatabase;
 import android.os.AsyncTask;
 import android.os.SystemClock;
 
+import java.io.BufferedInputStream;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
+import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.CookieHandler;
 import java.net.CookieManager;
 import java.net.CookiePolicy;
+import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.URLConnection;
 import java.util.ArrayList;
@@ -78,33 +81,35 @@ public class DataRetrieveTask extends AsyncTask <URL, Integer, String>{
 
             System.out.println("All your bases are belong to us");
 
+            StringBuilder Ahahah = new StringBuilder();
 
             db = dbHelper.getReadableDatabase();
 
-            String[] projection = {
-                    "ID"
-            };
+            for (ItemType type : ItemType.values()) {
+                String[] projection = {
+                        "ID"
+                };
 
-            String selection = "ID" + " = ?";
-            String[] selectionArgs = { "My Title" };
+                String selection = "ID" + " = ?";
+                String[] selectionArgs = {"My Title"};
 
-            Cursor cursor = db.query(
-                    "ANNEAU",                     // The table to query
-                    projection,                               // The columns to return
-                    null,                                // The columns for the WHERE clause
-                    null,                            // The values for the WHERE clause
-                    null,                                     // don't group the rows
-                    null,                                     // don't filter by row groups
-                    null                                 // The sort order
-            );
+                Cursor cursor = db.query(
+                        type.name(),                     // The table to query
+                        projection,                               // The columns to return
+                        null,                                // The columns for the WHERE clause
+                        null,                            // The values for the WHERE clause
+                        null,                                     // don't group the rows
+                        null,                                     // don't filter by row groups
+                        null                                 // The sort order
+                );
 
-            StringBuilder Ahahah = new StringBuilder();
+                while (cursor.moveToNext()) {
+                    Ahahah.append(cursor.getString(cursor.getColumnIndex("ID")) + "\n");
+                }
 
-            while(cursor.moveToNext()) {
-                Ahahah.append(cursor.getString(cursor.getColumnIndex("ID")) + "\n");
+                cursor.close();
             }
 
-            cursor.close();
             db.close();
             System.out.println(Ahahah);
         }
@@ -152,20 +157,17 @@ public class DataRetrieveTask extends AsyncTask <URL, Integer, String>{
 
             CookieHandler.setDefault(new CookieManager(null, CookiePolicy.ACCEPT_ALL));
 
-            URLConnection urlConnection = this.equipementURL.openConnection();
+            InputStream inputStream = this.equipementURL.openStream();
 
-            urlConnection.setRequestProperty(requestPropertyKey, requestPropertyValue);
+            inputStream.skip(219931);
 
-            urlConnection.connect();
-
-
-            BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(urlConnection.getInputStream()));
+            BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(inputStream));
 
             String line = new String();
 
             this.fileString = new StringBuilder();
 
-            while ((line = bufferedReader.readLine()) != null) {
+            while ((line = bufferedReader.readLine()) != null && line.indexOf("<script type=\"application/json\">{\"scroll\":true}</script>      </nav>") == -1) {
 
                 this.fileString.append("\n" + line);
 
@@ -173,7 +175,7 @@ public class DataRetrieveTask extends AsyncTask <URL, Integer, String>{
 
                 int pageNumberLineIndex = line.indexOf(pageString);
 
-                int pageNumberEndLineIndex = line.indexOf("\">");
+                int pageNumberEndLineIndex = line.indexOf("\">", pageNumberLineIndex);
 
                 if (pageNumberLineIndex != -1) {
 
@@ -187,6 +189,10 @@ public class DataRetrieveTask extends AsyncTask <URL, Integer, String>{
                 }
 
             }
+
+            inputStream.close();
+
+            bufferedReader.close();
 
             String pageMaxNumber = String.valueOf(highestPage);
 
@@ -245,24 +251,21 @@ public class DataRetrieveTask extends AsyncTask <URL, Integer, String>{
 
                 CookieHandler.setDefault(new CookieManager(null, CookiePolicy.ACCEPT_ALL));
 
-                URLConnection urlConnection = this.equipementURL.openConnection();
+                InputStream inputStream = this.equipementURL.openStream();
 
-                urlConnection.setRequestProperty(requestPropertyKey, requestPropertyValue);
+                inputStream.skip(36900);
 
-                urlConnection.connect();
-
-
-                BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(urlConnection.getInputStream()));
+                BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(this.equipementURL.openStream()));
 
                 String line = new String();
 
-                while ((line = bufferedReader.readLine()) != null) {
+                while ((line = bufferedReader.readLine()) != null && line.indexOf("<ul class=\"ak-pagination pagination ak-ajaxloader\" data-target=\".main-object-list\">") == -1) {
 
                     String pageString = "<td><span class=\"ak-linker\"><a href=\"/fr/mmorpg/encyclopedie/equipements/";
 
                     int itemIDFirstIndex = line.indexOf(pageString);
 
-                    int itemIDLastIndex = line.indexOf("\"><img");
+                    int itemIDLastIndex = line.indexOf("\"><img", itemIDFirstIndex);
 
                     if (itemIDFirstIndex != -1) {
 
@@ -274,13 +277,21 @@ public class DataRetrieveTask extends AsyncTask <URL, Integer, String>{
 
                 }
 
-                FileOutputStream fileOutputStream = new FileOutputStream(file);
+                bufferedReader.close();
 
-                ObjectOutputStream objectOutputStream = new ObjectOutputStream(fileOutputStream);
-
-                objectOutputStream.writeObject(equipementsIDs);
+                inputStream.close();
 
             }
+
+            FileOutputStream fileOutputStream = new FileOutputStream(file);
+
+            ObjectOutputStream objectOutputStream = new ObjectOutputStream(fileOutputStream);
+
+            objectOutputStream.writeObject(equipementsIDs);
+
+            fileOutputStream.close();
+
+            objectOutputStream.close();
 
             System.out.println("All items ids set!");
 
@@ -319,25 +330,21 @@ public class DataRetrieveTask extends AsyncTask <URL, Integer, String>{
         db = dbHelper.getWritableDatabase();
         ContentValues values = new ContentValues();
 
+        CookieHandler.setDefault(new CookieManager(null, CookiePolicy.ACCEPT_ALL));
+
         ArrayList <Item> allEquipements  = new ArrayList<>();
 
-        //for (int i = 0; i <= equipementsIDs.size(); i++)
-        //To allow testing
-        for (int i = 0; i <= 10; i++)
+        //for (int i = 0; i < equipementsIDs.size(); i++)
+        //Cache Problem
+        for (int i = 0; i < 10; i++)
         {
 
             this.equipementURL =  new URL("https://www.dofus.com/fr/mmorpg/encyclopedie/equipements/" + equipementsIDs.get(i));
 
-            CookieHandler.setDefault(new CookieManager(null, CookiePolicy.ACCEPT_ALL));
+            InputStream inputStream = this.equipementURL.openStream();
+            inputStream.skip(35402);
 
-            URLConnection urlConnection = this.equipementURL.openConnection();
-
-            urlConnection.setRequestProperty(requestPropertyKey, requestPropertyValue);
-
-            urlConnection.connect();
-
-
-            BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(urlConnection.getInputStream()));
+            BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(inputStream));
 
             this.fileString = new StringBuilder();
 
@@ -350,6 +357,9 @@ public class DataRetrieveTask extends AsyncTask <URL, Integer, String>{
 
             }
 
+            bufferedReader.close();
+            inputStream.close();
+
             Item item = new Item();
 
             String itemTypeString = "<strong>Type</strong> : <span>";
@@ -357,8 +367,6 @@ public class DataRetrieveTask extends AsyncTask <URL, Integer, String>{
             int itemTypeFirstIndex = this.fileString.indexOf(itemTypeString);
 
             int itemTypeLastIndex = this.fileString.indexOf("</span></div>", itemTypeFirstIndex);
-
-            System.out.println("index: " + itemTypeFirstIndex);
 
             if(itemTypeFirstIndex != -1)
             {
@@ -370,22 +378,17 @@ public class DataRetrieveTask extends AsyncTask <URL, Integer, String>{
 
                     if(type.name().equalsIgnoreCase(itemType)) {
                         item.setType(type);
-                        System.out.println(type.name());
 
                         values.put("ID", equipementsIDs.get(i));
                         db.insert(type.name(),null,values);
                         values.clear();
                     }
-
                 }
-
             }
-
         }
 
         db.close();
         return allEquipements;
-
     }
 
 }
