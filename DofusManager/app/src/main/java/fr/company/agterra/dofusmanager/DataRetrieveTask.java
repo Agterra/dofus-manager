@@ -5,9 +5,8 @@ import android.content.Context;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.os.AsyncTask;
-import android.os.SystemClock;
+import android.provider.Settings;
 
-import java.io.BufferedInputStream;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
@@ -19,9 +18,7 @@ import java.io.ObjectOutputStream;
 import java.net.CookieHandler;
 import java.net.CookieManager;
 import java.net.CookiePolicy;
-import java.net.HttpURLConnection;
 import java.net.URL;
-import java.net.URLConnection;
 import java.util.ArrayList;
 
 import fr.company.agterra.dofusmanager.Objects.Item;
@@ -48,9 +45,9 @@ public class DataRetrieveTask extends AsyncTask <URL, Integer, String>{
 
     private Context currentContext;
 
-    private DatabaseHelper dbHelper;
+    private DatabaseHelper databaseHelper;
 
-    private SQLiteDatabase db;
+    private SQLiteDatabase sqLiteDatabase;
 
 
     public DataRetrieveTask(Context currentContext)
@@ -65,11 +62,12 @@ public class DataRetrieveTask extends AsyncTask <URL, Integer, String>{
 
         try{
 
-            dbHelper = new DatabaseHelper(this.currentContext);
-            db = dbHelper.getWritableDatabase();
+            databaseHelper = new DatabaseHelper(this.currentContext);
+
+            sqLiteDatabase = databaseHelper.getWritableDatabase();
 
             for (ItemType type : ItemType.values())
-                db.delete(type.name(), null, null);
+                sqLiteDatabase.delete(type.name(), null, null);
 
             System.out.println("Synchronizing base...");
 
@@ -83,17 +81,21 @@ public class DataRetrieveTask extends AsyncTask <URL, Integer, String>{
 
             StringBuilder Ahahah = new StringBuilder();
 
-            db = dbHelper.getReadableDatabase();
+            sqLiteDatabase = databaseHelper.getReadableDatabase();
 
             for (ItemType type : ItemType.values()) {
+
                 String[] projection = {
+
                         "ID"
+
                 };
 
                 String selection = "ID" + " = ?";
+
                 String[] selectionArgs = {"My Title"};
 
-                Cursor cursor = db.query(
+                Cursor cursor = sqLiteDatabase.query(
                         type.name(),                     // The table to query
                         projection,                               // The columns to return
                         null,                                // The columns for the WHERE clause
@@ -104,14 +106,18 @@ public class DataRetrieveTask extends AsyncTask <URL, Integer, String>{
                 );
 
                 while (cursor.moveToNext()) {
+
                     Ahahah.append(cursor.getString(cursor.getColumnIndex("ID")) + "\n");
+
                 }
 
                 cursor.close();
             }
 
-            db.close();
+            sqLiteDatabase.close();
+
             System.out.println(Ahahah);
+
         }
         catch (Exception e)
         {
@@ -326,8 +332,10 @@ public class DataRetrieveTask extends AsyncTask <URL, Integer, String>{
     private ArrayList<Item> getAllEquipements (ArrayList <String> equipementsIDs) throws Exception
     {
 
-        dbHelper = new DatabaseHelper(this.currentContext);
-        db = dbHelper.getWritableDatabase();
+        databaseHelper = new DatabaseHelper(this.currentContext);
+
+        sqLiteDatabase = databaseHelper.getWritableDatabase();
+
         ContentValues values = new ContentValues();
 
         CookieHandler.setDefault(new CookieManager(null, CookiePolicy.ACCEPT_ALL));
@@ -342,6 +350,7 @@ public class DataRetrieveTask extends AsyncTask <URL, Integer, String>{
             this.equipementURL =  new URL("https://www.dofus.com/fr/mmorpg/encyclopedie/equipements/" + equipementsIDs.get(i));
 
             InputStream inputStream = this.equipementURL.openStream();
+
             inputStream.skip(35402);
 
             BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(inputStream));
@@ -358,9 +367,12 @@ public class DataRetrieveTask extends AsyncTask <URL, Integer, String>{
             }
 
             bufferedReader.close();
+
             inputStream.close();
 
             Item item = new Item();
+
+            System.out.println(this.fileString);
 
             String itemTypeString = "<strong>Type</strong> : <span>";
 
@@ -376,19 +388,27 @@ public class DataRetrieveTask extends AsyncTask <URL, Integer, String>{
                 for (ItemType type : ItemType.values())
                 {
 
+                    System.out.println("Item type: " + itemType);
+
                     if(type.name().equalsIgnoreCase(itemType)) {
+
                         item.setType(type);
 
                         values.put("ID", equipementsIDs.get(i));
-                        db.insert(type.name(),null,values);
+
+                        sqLiteDatabase.insert(type.name(),null,values);
+
                         values.clear();
+
                     }
                 }
             }
         }
 
-        db.close();
+        sqLiteDatabase.close();
+
         return allEquipements;
+
     }
 
 }
